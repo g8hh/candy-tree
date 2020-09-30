@@ -83,9 +83,9 @@ function loadVue() {
 
 	// data = function to return the text describing the reset before the amount gained (optional)
 	Vue.component('prestige-button', {
-		props: ['layer', 'data'],
+		props: ['layer', 'data', 'data2'],
 		template: `
-		<span>
+		<span v-if="data2 ? data2() : true">
 			<button v-if="layers[layer].type=='normal'" v-bind:class="{ [layer]: true, reset: true, locked: tmp.layerAmt[layer].lt(tmp.layerReqs[layer]), can: tmp.layerAmt[layer].gte(tmp.layerReqs[layer]) }" v-bind:style="{'background-color': layers[layer].color}" v-on:click="doReset(layer)"><span v-if="player[layer].points.lt(1e3)">{{data ? data() : "Reset for "}}</span>+<b>{{formatWhole(tmp.resetGain[layer])}}</b> {{layers[layer].resource}}<span v-if="tmp.resetGain[layer].lt(100) && player[layer].points.lt(1e3)"><br><br>Next at {{ (layers[layer].resCeil ? formatWhole(tmp.nextAt[layer]) : format(tmp.nextAt[layer])) }} {{ layers[layer].baseResource }}</span></button>
 			<button v-if="layers[layer].type=='static'" v-bind:class="{ [layer]: true, reset: true, locked: tmp.layerAmt[layer].lt(tmp.nextAt[layer]), can: tmp.layerAmt[layer].gte(tmp.nextAt[layer]) }" v-bind:style="{'background-color': layers[layer].color}" v-on:click="doReset(layer)"><span v-if="player[layer].points.lt(10)">{{data ? data() : "Reset for "}}</span>+<b>{{formatWhole(tmp.resetGain[layer])}}</b> {{layers[layer].resource}}<br><br><span v-if="player[layer].points.lt(10)">Req: {{formatWhole(tmp.layerAmt[layer])}} / </span>{{(layers[layer].resCeil ? formatWhole(tmp.nextAt[layer]) : format(tmp.nextAt[layer]))}} {{ layers[layer].baseResource }}</button>
 		</span>
@@ -94,9 +94,9 @@ function loadVue() {
 
 	// Displays the main resource for the layer
 	Vue.component('main-display', {
-		props: ['layer'],
+		props: ['layer', 'data'],
 		template: `
-		<div><span v-if="player[layer].points.lt('1e1000')">You have </span><h2 v-bind:style="{'color': layers[layer].color, 'text-shadow': '0px 0px 10px' + layers[layer].color}">{{formatWhole(player[layer].points)}}</h2> {{layers[layer].resource}}<span v-if="layers[layer].effectDescription">, {{layers[layer].effectDescription()}}</span><br><br></span>
+		<div v-if="data ? data() : true"><span v-if="player[layer].points.lt('1e1000')">You have </span><h2 v-bind:style="{'color': layers[layer].color, 'text-shadow': '0px 0px 10px' + layers[layer].color}">{{formatWhole(player[layer].points)}}</h2> {{layers[layer].resource}}<span v-if="layers[layer].effectDescription">, {{layers[layer].effectDescription()}}</span><br><br></div>
 		`
 	})
 

@@ -2,12 +2,12 @@
 <head>
 	<script>
 		const modInfo = {
-			name: "The Modding Tree",
-			id: "modbase",
-			pointsName: "points"
+			name: "The Candy Tree",
+			id: "candy",
+			pointsName: "candies"
 		}
 	</script>
-	<title>The Modding Tree</title>
+	<title>The Candy Tree</title>
 	<link rel="stylesheet" type="text/css" href="style.css" />
 	<link href="https://fonts.googleapis.com/css?family=Inconsolata" rel="stylesheet">
 	<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
@@ -22,7 +22,7 @@
 </head>
 <body onload="load()">
 	<div id="app">
-		<div class="vl" v-if="player.tab!='tree'&&player.tab!='gameEnded'"></div>
+		<div class="vl" v-if="player.tab!='tree'&&player.tab!='gameEnded'&& player.c.unlockedTree"></div>
 		<div v-if="player.tab=='gameEnded'" class="fullWidth">
 			<br>
 			<h2>{{modInfo.name}} {{VERSION.withoutName}}</h2><br><br>
@@ -98,7 +98,7 @@
 				</tr>
 			</table>
 		</div>
-		<div id="treeTab" v-if="player.tab!='gameEnded'" onscroll="resizeCanvas()" v-bind:class="{ fullWidth: player.tab == 'tree', col: player.tab != 'tree', left: player.tab != 'tree'}">
+		<div id="treeTab" v-if="player.tab!='gameEnded' && player.c.unlockedTree" onscroll="resizeCanvas()" v-bind:class="{ fullWidth: player.tab == 'tree', col: player.tab != 'tree', left: player.tab != 'tree'}">
 			<div id="version" onclick="showTab('changelog')">{{VERSION.withoutName}}</div>
 			<img id="optionWheel" v-if="player.tab!='options'" src="options_wheel.png" onclick="showTab('options')"></img>
 			<div id="info" v-if="player.tab!='info'" onclick="showTab('info')"><br>i</div>
@@ -130,28 +130,27 @@
 			<canvas id="treeCanvas" class="canvas"></canvas>
 		</div>
 		<div v-for="layer in LAYERS">
-			<div v-if="player.tab==layer && !layers[layer].tabFormat" class="col right">
-				<button class="back" onclick="showTab('tree')">←</button><br><br><br>
-				<main-display :layer="layer"></main-display>
-				<prestige-button :layer="layer"></prestige-button>
-				<span v-if="layers[layer].type=='normal' && tmp.resetGain[layer].lt(100) && player[layer].points.lt(1e3)"><br>You have {{formatWhole(tmp.layerAmt[layer])}} {{layers[layer].baseResource}}</span>
-				<br><br>
-				<span v-if="player[layer].best != undefined">Your best {{layers[layer].resource}} is {{formatWhole(player[layer].best)}}<br></span>
-				<span v-if="player[layer].total != undefined">You have made a total of {{formatWhole(player[layer].total)}} {{layers[layer].resource}}<br></span>
-				<milestones :layer="layer"></milestones>
-				<br><br>
-				<upgrades :layer="layer"></upgrades>
-				<challs :layer="layer"></challs>
-				<br><br>
-			</div>
-			<div v-if="player.tab==layer && layers[layer].tabFormat" class="col right">
-				<button class="back" onclick="showTab('tree')">←</button><br><br><br>
-				<div v-for="data in layers[layer].tabFormat">
+			<div v-if="player.tab==layer" v-bind:class="player.c.unlockedTree ? 'col right' : 'fullWidth'" v-bind:style="layers[layer].style ? layers[layer].style : {}">
+				<button v-if="player.c.unlockedTree" class="back" onclick="showTab('tree')">←</button><br><br><br>
+				<div v-if="!layers[layer].tabFormat">
+					<main-display :layer="layer"></main-display>
+					<prestige-button :layer="layer"></prestige-button>
+					<span v-if="layers[layer].type=='normal' && tmp.resetGain[layer].lt(100) && player[layer].points.lt(1e3)"><br>You have {{formatWhole(tmp.layerAmt[layer])}} {{layers[layer].baseResource}}</span>
+					<br><br>
+					<span v-if="player[layer].best != undefined">Your best {{layers[layer].resource}} is {{formatWhole(player[layer].best)}}<br></span>
+					<span v-if="player[layer].total != undefined">You have made a total of {{formatWhole(player[layer].total)}} {{layers[layer].resource}}<br></span>
+					<milestones :layer="layer"></milestones>
+					<br><br>
+					<upgrades :layer="layer"></upgrades>
+					<challs :layer="layer"></challs>
+					<br><br>
+				</div>
+				<div v-if="layers[layer].tabFormat">
+					<div v-for="data in layers[layer].tabFormat">
 					<div v-if="!Array.isArray(data)" v-bind:is="data" :layer= "layer"></div>
 					<div v-else-if="data.length==3" v-bind:is="data[0]" :layer= "layer" :data= "data[1]" :data2="data[2]"></div>
 					<div v-else-if="data.length==2" v-bind:is="data[0]" :layer= "layer" :data= "data[1]"></div>
-
-				</div>
+				</divs>
 			</div>
 		</div>
 	</div>

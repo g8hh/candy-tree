@@ -6,8 +6,9 @@ var layers = {
             best: new Decimal(0),
             total: new Decimal(0),
             upgrades: [],
-            milestones: [],
-            beep: false,
+            unlockedTree: false,
+            eaten: new Decimal(0),
+            thrown: false,
         }},
         color: "#4BEC13",
         requires() {return new Decimal(10)}, // Can be a function that takes requirement increases into account
@@ -29,56 +30,43 @@ var layers = {
             return new Decimal(1)
         },
         row: 0,
-        effect() {return { // Formulas for any boosts inherent to resources in the layer. Can return a single value instead of an object if there is just one effect
-            waffleBoost: (true == false ? 0 : Decimal.pow(player.c.points, 0.2)),
-            icecreamCap: (player.c.points * 10)
-        }},
-        effectDescription() {
-            eff = layers.c.effect();
-            return "which are boosting waffles by "+format(eff.waffleBoost)+" and increasing the Ice Cream cap by "+format(eff.icecreamCap)
-        },
-        milestones: {
-            0: {requirementDesc: "3 Lollipops",
-            done() {return player.c.best.gte(3)},
-            effectDesc: "Makes this green",
-            },
-            1: {requirementDesc: "4 Lollipops",
-            done() {return player.c.best.gte(4)},
-            effectDesc: "You can toggle beep and boop (which do nothing)",
-            toggles: [
-                ["c", "beep"], // Each toggle is defined by a layer and the data toggled for that layer
-                ["f", "boop"]],
-            }
-        },
         upgrades: {
             rows: 1,
-            cols: 3,
+            cols: 4,
             11: {
-                desc: "Gain 1 Candy every second.",
-                cost: new Decimal(1),
-                unl() { return player.c.unl },
+                desc: "Gain twice as many candies.",
+                currencyDisplayName: "candies",
+                currencyInternalName: "points",
+                cost: new Decimal(10),
+                unl() { return player.totalPoints.gte(10)},
             },
             12: {
-                desc: "Candy generation is faster based on your unspent Lollipops.",
+                desc: "Candy generation is faster based on your unspent lollipops.",
                 cost: new Decimal(1),
                 unl() { return player.c.upgrades.includes(11) },
                 effect() {
-                    let ret = player.c.points.add(1).pow(player.c.upgrades.includes(24)?1.1:(player.c.upgrades.includes(14)?0.75:0.5)) 
+                    let ret = player.c.points.add(1).pow(0.5)
                     if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
                     return ret;
                 },
                 effDisp(x) { return format(x)+"x" },
             },
             13: {
-                desc: "Make this layer act like you bought it first.",
-                cost: new Decimal(69),
-                currencyDisplayName: "candies", // Use if using a nonstandard currency
-                currencyInternalName: "points", // Use if using a nonstandard currency
-                currencyLayer: "", // Leave empty if not in a layer "e.g. points"
+                desc: "Unspent lollipops boost lollipop gain.",
+                cost: new Decimal(2),
                 unl() { return player.c.upgrades.includes(12) },
-                onPurchase() {
-                    player.c.order = 0
-                }
+                effect() {
+                    let ret = player.c.points.add(1).pow(0.25) 
+                    if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
+                    return ret;
+                },
+                effDisp(x) { return format(x)+"x" },
+            },
+            14: {
+                desc: "Unlock the World Tree.",
+                cost: new Decimal(3),
+                unl() { return player.c.upgrades.includes(12) },
+                onPurchase() {player.c.unlockedTree=true}
             },
         },
         doReset(layer){
@@ -86,10 +74,16 @@ var layers = {
         },
         convertToDecimal() {
             // Convert any layer-specific values (besides points, total, and best) to Decimal
+            player.c.eaten = new Decimal(player.c.eaten)
         },
         layerShown() {return true}, // Condition for when layer appears
         update(diff) {
-            if (player.c.upgrades.includes(11)) player.points = player.points.add(tmp.pointGen.times(diff)).max(0)
+            gain = tmp.pointGen.times(diff).max(0)
+            if (true){
+                player.points = player.points.add(gain).max(0)
+                player.totalPoints = player.totalPoints.add(gain).max(0)
+                player.bestPoints = player.points.max(player.bestPoints)
+            } 
         }, // Do any gameloop things (e.g. resource generation) inherent to this layer
         automate() {
         }, // Do any automation inherent to this layer if appropriate
@@ -97,17 +91,29 @@ var layers = {
         }, // Do any necessary temp updating
         resetsNothing() {return false},
         incr_order: [], // Array of layer names to have their order increased when this one is first unlocked
-        
+        eatCandies() {
+            player.c.eaten = player.c.eaten.add(player.points).floor()
+            player.points = new Decimal(0)
+        },
         // Optional, lets you format the tab yourself by listing components. You can create your own components in v.js.
-        tabFormat: ["main-display",
-                    ["prestige-button", function(){return "Melt your points into "}],
-                    ["raw-html", function() {return "<button onclick='console.log(`yeet`)'>'HI'</button>"}],
-                    ["display-text",
-                        function() {return 'I have ' + format(player.points) + ' pointy points!'},
-                        {"color": "red", "font-size": "32px", "font-family": "Comic Sans MS"}],
+        tabFormat: [
+                    ["display-text", function() {return 'You have ' + formatWhole(player.points) + ' candies'}],
+                    "blank", "blank",
+                    ["raw-html", function() {return "<button onclick='layers.c.eatCandies()'>Eat all the candies</button>"}],
                     "blank",
-                    ["toggle", ["c", "beep"]],
-                    "milestones", "blank", "blank", "upgrades"]
+                    ["display-text", function(){return (player.c.eaten.equals(0) ? "\xa0" : ("You have eaten " + formatWhole(player.c.eaten) + " candies!"))}],
+                    "blank", "blank",
+                    ["raw-html", function() {return "<button onclick='player.c.thrown=true'>Throw 10 candies on the floor</button>"}],
+                    "blank",
+                    ["display-text", function(){return (player.c.thrown ? "No. \\O_O/" : "\xa0")}],
+                    "blank", "blank",
+                    ["main-display" , function(){return player.bestPoints.gte(15)}],
+                    ["prestige-button", function(){return "Trade all of your candies for "}, function(){return player.bestPoints.gte(15)}],
+                    "blank",
+                    "blank", "blank", "upgrades", "blank",
+                    ["display-text", function(){return (player.totalPoints.gte(10) ? candyMerchant : "\xa0")}, {"font-family": "monospace", "white-space": "pre"}],
+                    ],
+
     }, 
 
     f: {
@@ -117,11 +123,13 @@ var layers = {
             boop: false,
         }},
         color: "#FE0102",
-        requires() {return new Decimal(200)}, 
+        requires() {return new Decimal("1e1000")}, 
         resource: "farm points", 
-        baseResource: "candies", 
-        baseAmount() {return player.points},
-        type: "normal", 
+        baseResource: "lollipops", 
+        baseAmount() {return player.c.points},
+        type: "static", 
+        canBuyMax() {return false},
+        base: 3,
         exponent: 0.5, 
         resCeil: false, 
         gainMult() {
@@ -161,3 +169,25 @@ function addLayer(layerName, layerData){ // Call this to add layers from a diffe
         ROW_LAYERS[row][layer]=layer;
     }
 }
+
+var candyMerchant = "  \
+.---.\xa0\xa0\xa0\xa0\xa0\xa0\n\
+|   '.|  __\n\
+\xa0| ___.--'  )\n\
+_.-'_` _%%%_/\xa0\xa0\n\
+\xa0\xa0.-'%%% a: a %%%\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\n\
+\xa0\xa0\xa0\xa0\xa0\xa0%%  L   %%_\xa0\xa0\xa0\xa0\xa0\xa0\xa0\xa0\n\
+\xa0\xa0\xa0\xa0\xa0\xa0_%\\'-' |  /-.__\xa0\xa0\xa0\xa0\n\
+\xa0\xa0\xa0.-' / )--' #/     '\\\xa0\xa0\n\
+\xa0\xa0/'  /  /---'(    :   \\\xa0\n\
+\xa0/   |  /( /|##|  \\     |\n\
+/   ||# | / | /|   \\    \\\n\
+|   ||##| I \\/ |   |   _|\n\
+|   ||: | o  |#|   |  / |\n\
+|   ||  / I  |:/  /   |/\xa0\n\
+|   ||  | o   /  /    /\xa0\xa0\n\
+|   \\|  | I  |. /    /\xa0\xa0\xa0\n\
+\xa0\\  /|##| o  |.|    /\xa0\xa0\xa0\xa0\n\
+\xa0\xa0\\/ \::|/\\_ /  ---'|\xa0\xa0\xa0\xa0\xa0\n\
+\n\
+The candy merchant\n"

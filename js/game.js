@@ -6,7 +6,7 @@ var gameEnded = false;
 
 function startPlayerBase() {
 	return {
-		tab: "tree",
+		tab: "c",
 		time: Date.now(),
 		autosave: true,
 		notify: {},
@@ -18,7 +18,9 @@ function startPlayerBase() {
 		timePlayed: 0,
 		keepGoing: false,
 		hasNaN: false,
-		points: new Decimal(10),
+		points: new Decimal(0),
+		totalPoints: new Decimal(0),
+		bestPoints: new Decimal(0),
 	}
 }
 
@@ -32,6 +34,7 @@ function getStartPlayer() {
 
 function getPointGen() {
 	let gain = new Decimal(1)
+	if (player.c.upgrades.includes(11)) gain = gain.times(2)
 	if (player.c.upgrades.includes(12)) gain = gain.times(layers.c.upgrades["12"].effect())
 	return gain
 }
@@ -72,7 +75,7 @@ function load() {
 	else player = Object.assign(getStartPlayer(), JSON.parse(atob(get)))
 	fixSave()
 
-	player.tab = "tree"
+	player.tab = (player.c.unlockedTree ? "tree" : "c")
 	if (player.offlineProd) {
 		if (player.offTime === undefined) player.offTime = { remain: 0 }
 		player.offTime.remain += (Date.now() - player.time) / 1000
@@ -134,6 +137,9 @@ function versionCheck() {
 
 function convertToDecimal() {
 	player.points = new Decimal(player.points)
+	player.totalPoints = new Decimal(player.totalPoints)
+	player.bestPoints = new Decimal(player.bestPoints)
+
 	for (layer in layers) {
 		player[layer].points = new Decimal(player[layer].points)
 		if (player[layer].best != undefined) player[layer].best = new Decimal(player[layer].best)
@@ -228,7 +234,7 @@ function notifyLayer(name) {
 function getResetGain(layer) {
 	if (tmp.gainExp[layer].eq(0)) return new Decimal(0)
 	if (layers[layer].type=="static") {
-		if ((!canBuyMax(layer)) || tmp.layerAmt[layer].lt(tmp.layerReqs[layer])) return new Decimal(1)
+		if ((!layers[layer].canBuyMax()) || tmp.layerAmt[layer].lt(tmp.layerReqs[layer])) return new Decimal(1)
 		let gain = tmp.layerAmt[layer].div(tmp.layerReqs[layer]).div(tmp.gainMults[layer]).max(1).log(layers[layer].base).times(tmp.gainExp[layer]).pow(Decimal.pow(layers[layer].exponent, -1))
 		return gain.floor().sub(player[layer].points).add(1).max(1);
 	} else {
@@ -301,7 +307,7 @@ function doReset(layer, force=false) {
 		let gain = tmp.resetGain[layer]
 		if (layers[layer].type=="static") {
 			if (tmp.layerAmt[layer].lt(tmp.nextAt[layer])) return;
-			gain =(canBuyMax(layer) ? gain : 1)
+			gain =(layers[layer].canBuyMax() ? gain : 1)
 		} 
 		
 		if (layers[layer].onPrestige)
@@ -331,7 +337,7 @@ function doReset(layer, force=false) {
 	}
 
 	prevOnReset = {...player} //Deep Copy
-	player.points = (row == 0 ? new Decimal(0) : new Decimal(10))
+	player.points = (row == 0 ? new Decimal(0) : new Decimal(0))
 
 	for (let x = row; x >= 0; x--) rowReset(x, layer)
 	prevOnReset = undefined
@@ -397,7 +403,7 @@ function resetRow(row) {
 		player[layers[layer]].unl = false
 		if (player[layers[layer]].order) player[layers[layer]].order = 0
 	}
-	player.points = new Decimal(10)
+	player.points = new Decimal(0)
 	updateTemp();
 	resizeCanvas();
 }
