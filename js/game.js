@@ -35,7 +35,8 @@ function getStartPlayer() {
 function getPointGen() {
 	let gain = new Decimal(1)
 	if (player.c.upgrades.includes(11)) gain = gain.times(2)
-	if (player.c.upgrades.includes(12)) gain = gain.times(layers.c.upgrades["12"].effect())
+	if (player.c.upgrades.includes(22)) mult = mult.times(2)
+	if (player.c.upgrades.includes(13)) gain = gain.times(layers.c.upgrades[13].effect())
 	return gain
 }
 
@@ -321,8 +322,10 @@ function doReset(layer, force=false) {
 			needCanvasUpdate = true;
 
 			if (layers[layer].incr_order){
-				for (lr in layers[layer].incr_order)
+				for (lr in layers[layer].incr_order){ 
+					lr = layers[layer].incr_order[lr]
 					if (!player[lr].unl) player[lr].order++
+				}
 			}
 		}
 	

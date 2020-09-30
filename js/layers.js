@@ -9,8 +9,9 @@ var layers = {
             unlockedTree: false,
             eaten: new Decimal(0),
             thrown: false,
+            unlockedLollipops: false,
         }},
-        color: "#4BEC13",
+        color: "#00bfbf",
         requires() {return new Decimal(10)}, // Can be a function that takes requirement increases into account
         resource: "lollipops", // Name of prestige currency
         baseResource: "candies", // Name of resource prestige is based on
@@ -19,11 +20,10 @@ var layers = {
         exponent: 0.5, // Prestige currency exponent
         base: 5, // Only needed for static layers, base of the formula (b^(x^exp))
         resCeil: false, // True if the resource needs to be rounded up
-        canBuyMax() {}, // Only needed for static layers
         gainMult() {
             mult = new Decimal(1)
-            if (player.c.upgrades.includes(21)) mult = mult.times(2)
-			if (player.c.upgrades.includes(23)) mult = mult.times(LAYER_UPGS.c[23].currently())
+            if (player.c.upgrades.includes(22)) mult = mult.times(2)
+			if (player.c.upgrades.includes(14)) mult = mult.times(layers.c.upgrades[14].effect())
             return mult
         },
         gainExp() {
@@ -31,8 +31,8 @@ var layers = {
         },
         row: 0,
         upgrades: {
-            rows: 1,
-            cols: 4,
+            rows: 2,
+            cols: 5,
             11: {
                 desc: "Gain twice as many candies.",
                 currencyDisplayName: "candies",
@@ -41,39 +41,87 @@ var layers = {
                 unl() { return player.totalPoints.gte(10)},
             },
             12: {
-                desc: "Candy generation is faster based on your unspent lollipops.",
-                cost: new Decimal(1),
+                desc: "Discover the power of Lollipops.",
+                currencyDisplayName: "candies",
+                currencyInternalName: "points",
+                cost: new Decimal(5),
+                onPurchase() {player.c.unlockedLollipops=true},
                 unl() { return player.c.upgrades.includes(11) },
-                effect() {
-                    let ret = player.c.points.add(1).pow(0.5)
-                    if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
-                    return ret;
-                },
-                effDisp(x) { return format(x)+"x" },
             },
             13: {
-                desc: "Unspent lollipops boost lollipop gain.",
-                cost: new Decimal(2),
+                desc: "Candy generation is faster based on your unspent lollipops.",
+                cost: new Decimal(1),
                 unl() { return player.c.upgrades.includes(12) },
                 effect() {
-                    let ret = player.c.points.add(1).pow(0.25) 
+                    let ret = player.c.points.add(2).pow(0.5)
                     if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
                     return ret;
                 },
                 effDisp(x) { return format(x)+"x" },
             },
             14: {
+                desc: "Unspent lollipops boost lollipop gain.",
+                cost: new Decimal(5),
+                unl() { return player.c.upgrades.includes(13) },
+                effect() {
+                    let ret = player.c.points.add(2).pow(0.25) 
+                    if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
+                    return ret;
+                },
+                effDisp(x) { return format(x)+"x" },
+            },
+            15: {
+                desc: "Dummy upgrade.",
+                cost: new Decimal(0),
+                unl() { return false}
+            },
+            21: {
+                desc: "Candies boost candy production.",
+                cost: new Decimal(100),
+                currencyDisplayName: "candies", // Use if using a nonstandard currency
+                currencyInternalName: "points", // Use if using a nonstandard currency
+                unl() { return player.c.upgrades.includes(14) },
+                effect() {
+                    let ret = player.points.add(1).log10().add(1).pow(1.5)
+                    return ret;
+                },
+                effDisp(x) { return format(x)+"x" },
+            },
+            22: {
+                desc: "Double both lollipop and candy gain.",
+                cost: new Decimal(25),
+                unl() { return player.c.upgrades.includes(21) },
+            },
+            23: {
                 desc: "Unlock the World Tree.",
-                cost: new Decimal(3),
-                unl() { return player.c.upgrades.includes(12) },
+                cost: new Decimal(100),
+                unl() { return player.c.upgrades.includes(21) },
                 onPurchase() {player.c.unlockedTree=true}
+            },
+            24: {
+                desc: "Wooden Sword: does 1 damage per second.",
+                currencyDisplayName: "candies", // Use if using a nonstandard currency
+                currencyInternalName: "points", // Use if using a nonstandard currency
+                cost: new Decimal(5000),
+                unl() { return player.c.upgrades.includes(21) && player.a.order == 0},
+            },
+            25: {
+                desc: "Wooden Sword: does 1 damage per second.",
+                currencyDisplayName: "candies", // Use if using a nonstandard currency
+                currencyInternalName: "points", // Use if using a nonstandard currency
+                cost: new Decimal(1e10),
+                unl() { return player.c.upgrades.includes(21) && player.a.order == 1},
             },
         },
         doReset(layer){
-            if(layers[layer].row > layers["c"].row) fullLayerReset('c') // This is actually the default behavior
+            if (layer == "c") return
+			player.c.points = new Decimal(0)
+            player.c.best= new Decimal(0)
+            player.c.total= new Decimal(0)
+            player.c.upgrades= []
+            player.c.eaten= new Decimal(0)
         },
         convertToDecimal() {
-            // Convert any layer-specific values (besides points, total, and best) to Decimal
             player.c.eaten = new Decimal(player.c.eaten)
         },
         layerShown() {return true}, // Condition for when layer appears
@@ -85,12 +133,6 @@ var layers = {
                 player.bestPoints = player.points.max(player.bestPoints)
             } 
         }, // Do any gameloop things (e.g. resource generation) inherent to this layer
-        automate() {
-        }, // Do any automation inherent to this layer if appropriate
-        updateTemp() {
-        }, // Do any necessary temp updating
-        resetsNothing() {return false},
-        incr_order: [], // Array of layer names to have their order increased when this one is first unlocked
         eatCandies() {
             player.c.eaten = player.c.eaten.add(player.points).floor()
             player.points = new Decimal(0)
@@ -107,8 +149,8 @@ var layers = {
                     "blank",
                     ["display-text", function(){return (player.c.thrown ? "No. \\O_O/" : "\xa0")}],
                     "blank", "blank",
-                    ["main-display" , function(){return player.bestPoints.gte(15)}],
-                    ["prestige-button", function(){return "Trade all of your candies for "}, function(){return player.bestPoints.gte(15)}],
+                    ["main-display" , function(){return player.c.unlockedLollipops}],
+                    ["prestige-button", function(){return "Trade all of your candies for "}, function(){return player.c.unlockedLollipops}],
                     "blank",
                     "blank", "blank", "upgrades", "blank",
                     ["display-text", function(){return (player.totalPoints.gte(10) ? candyMerchant : "\xa0")}, {"font-family": "monospace", "white-space": "pre"}],
@@ -119,10 +161,10 @@ var layers = {
     f: {
         startData() { return {
             unl: false,
-			points: new Decimal(0),
-            boop: false,
+            points: new Decimal(0),
+            order: 0,
         }},
-        color: "#FE0102",
+        color: "#B81F28",
         requires() {return new Decimal("1e1000")}, 
         resource: "farm points", 
         baseResource: "lollipops", 
@@ -140,7 +182,51 @@ var layers = {
         },
         row: 1,
         layerShown() {return true}, 
-        branches: [["c", 1]] // Each pair corresponds to a line added to the tree when this node is unlocked. The letter is the other end of the line, and the number affects the color, 1 is default
+        branches: [["c", 1]], // Each pair corresponds to a line added to the tree when this node is unlocked. The letter is the other end of the line, and the number affects the color, 1 is default
+        incr_order: ["a"], // Array of layer names to have their order increased when this one is first unlocked
+
+    }, 
+
+    a: {
+        startData() { return {
+            unl: false,
+			points: new Decimal(0),
+            damage: new Decimal(0),
+            order: 0,
+        }},
+        color: "#F7E833",
+        requires() {return new Decimal("1e1000")}, 
+        resource: "victories", 
+        baseResource: "damage", 
+        baseAmount() {return player.a.damage},
+        type: "static", 
+        canBuyMax() {return false},
+        base: 3,
+        exponent: 0.5, 
+        resCeil: false, 
+        update(diff) {
+            gain = new Decimal(0)
+            if (player.c.upgrades.includes(24) || player.c.upgrades.includes(25)) gain = gain.add(1);
+            if (true){
+                gain = gain.times(diff)
+                player.a.damage = player.a.damage.add(gain).max(0)
+            } 
+        }, // Do any gameloop things (e.g. resource generation) inherent to this layer
+
+        gainMult() {
+            return new Decimal(1)
+        },
+        gainExp() {
+            return new Decimal(1)
+        },
+        row: 1,
+        layerShown() {return true}, 
+        convertToDecimal() {
+            player.a.damage = new Decimal(player.a.damage)
+        },
+        branches: [["c", 1]], // Each pair corresponds to a line added to the tree when this node is unlocked. The letter is the other end of the line, and the number affects the color, 1 is default
+        incr_order: ["f"], // Array of layer names to have their order increased when this one is first unlocked
+
     }, 
 } 
 
