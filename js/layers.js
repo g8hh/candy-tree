@@ -57,7 +57,7 @@ var layers = {
                     if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
                     return ret;
                 },
-                effDisp(x) { return format(x)+"x" },
+                effDisp(fx) { return format(fx)+"x" },
             },
             14: {
                 desc: "Unspent lollipops boost lollipop gain.",
@@ -111,6 +111,48 @@ var layers = {
                 currencyInternalName: "points", // Use if using a nonstandard currency
                 cost: new Decimal(1e10),
                 unl() { return player.c.upgrades.includes(21) && player.a.order == 1},
+            },
+        },
+        buyables: {
+            rows: 1,
+            cols: 1,
+            respec() { // Optional, reset things and give back your currency. Having this function makes a respec button appear
+                player.c.points = player.c.points.add(player.c.spentOnBuyables) // A built-in thing to keep track of this but only keeps a single value
+                resetBuyables("c")
+                doReset("c", true) // Force a reset
+            },
+            respecText: "Respec Thingies", // Text on Respec button, optional
+            11: {
+                title: "Exhancers", // Optional, displayed at the top in a larger font
+                cost(x) { // cost for buying xth buyable, can be an object if there are multiple currencies
+                    if (x.gte(25)) x = x.pow(2).div(25)
+                    let cost = Decimal.pow(2, x.pow(1.5))
+                    return cost.floor()
+                },
+                effect(x) { // Effects of owning x of the items, x is a decimal
+                    let eff = {}
+                    if (x.gte(0)) eff.first = Decimal.pow(25, x.pow(1.1))
+                    else eff.first = Decimal.pow(1/25, x.times(-1).pow(1.1))
+                
+                    if (x.gte(0)) eff.second = x.pow(0.8)
+                    else eff.second = x.times(-1).pow(0.8).times(-1)
+                    return eff;
+                },
+                display (){
+                    let data = tmp.buyables.c["11"]
+                    return "Cost: " + format(data.cost) + " lollipops\n\
+                    Amount: " + player.c.buyables["11"] + "\n\
+                    Adds + " + format(data.effects.first) + " things and multiplies stuff by " + format(data.effects.second)
+                },
+                unl() { return player.c.unl },
+                canAfford() {return player.c.points.gte(tmp.buyables.c[11].cost)},
+                buy() {
+                    cost = tmp.buyables.c[11].cost
+                    player.c.points = player.c.points.sub(cost)	
+                    player.c.buyables[11] = player.c.buyables[11].add(1)
+                    player.c.spentOnBuyables = player.c.spentOnBuyables.add(cost) // This is a built-in system that you can use for respeccing but it only works with a single Decimal value
+                },
+                buyMax() {}, // You'll have to handle this yourself if you want
             },
         },
         doReset(layer){
@@ -242,6 +284,10 @@ function layerShown(layer){
 }
 
 var LAYERS = Object.keys(layers);
+
+var hotkeys = {};
+
+
 
 var ROW_LAYERS = {}
 for (layer in layers){

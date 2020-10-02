@@ -6,9 +6,6 @@ var layers = {
             best: new Decimal(0),
             total: new Decimal(0),
             order: 0, // Used for tracking other relevant layers unlocked before this one
-            upgrades: [],
-            milestones: [],
-            challs: [],
             beep:false,
         }},
         color: "#4BEC13",
@@ -59,7 +56,7 @@ var layers = {
                     if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
                     return ret;
                 },
-                effDisp(x) { return format(x)+"x" },
+                effDisp(fx) { return format(fx)+"x" },
             },
             13: {
                 desc: "Make this layer act like you bought it first.",
@@ -108,6 +105,48 @@ var layers = {
                 onComplete() {console.log("hiii")} // Called when you complete the challenge
             },
         }, 
+        buyables: {
+            rows: 1,
+            cols: 1,
+            respec() { // Optional, reset things and give back your currency. Having this function makes a respec button appear
+                player.c.points = player.c.points.add(player.c.spentOnBuyables) // A built-in thing to keep track of this but only keeps a single value
+                resetBuyables("c")
+                doReset("c", true) // Force a reset
+            },
+            respecText: "Respec Thingies", // Text on Respec button, optional
+            11: {
+                title: "Exhancers", // Optional, displayed at the top in a larger font
+                cost(x) { // cost for buying xth buyable, can be an object if there are multiple currencies
+                    if (x.gte(25)) x = x.pow(2).div(25)
+                    let cost = Decimal.pow(2, x.pow(1.5))
+                    return cost.floor()
+                },
+                effect(x) { // Effects of owning x of the items, x is a decimal
+                    let eff = {}
+                    if (x.gte(0)) eff.first = Decimal.pow(25, x.pow(1.1))
+                    else eff.first = Decimal.pow(1/25, x.times(-1).pow(1.1))
+                
+                    if (x.gte(0)) eff.second = x.pow(0.8)
+                    else eff.second = x.times(-1).pow(0.8).times(-1)
+                    return eff;
+                },
+                display (){
+                    let data = tmp.buyables.c["11"]
+                    return "Cost: " + format(data.cost) + " lollipops\n\
+                    Amount: " + player.c.buyables["11"] + "\n\
+                    Adds + " + format(data.effects.first) + " things and multiplies stuff by " + format(data.effects.second)
+                },
+                unl() { return player.c.unl },
+                canAfford() {return player.c.points.gte(tmp.buyables.c[11].cost)},
+                buy() {
+                    cost = tmp.buyables.c[11].cost
+                    player.c.points = player.c.points.sub(cost)	
+                    player.c.buyables[11] = player.c.buyables[11].add(1)
+                    player.c.spentOnBuyables = player.c.spentOnBuyables.add(cost) // This is a built-in system that you can use for respeccing but it only works with a single Decimal value
+                },
+                buyMax() {}, // You'll have to handle this yourself if you want
+            },
+        },
         convertToDecimal() {
             // Convert any layer-specific values (besides points, total, and best) to Decimal after loading
         },
@@ -121,6 +160,10 @@ var layers = {
         onPrestige(gain) {
             return
         }, // Useful for if you gain secondary resources or have other interesting things happen to this layer when you reset it. You gain the currency after this function ends.
+        hotkeys: [
+            {key: "c", desc: "C: reset for lollipops or whatever", onPress(){if (player.c.unl) doReset("c")}},
+            {key: "ctrl+c", desc: "Ctrl+c: respec things", onPress(){if (player.c.unl) respecBuyables("c")}},
+        ],
         incr_order: [], // Array of layer names to have their order increased when this one is first unlocked
         branches: [], // Each pair corresponds to a line added to the tree when this node is unlocked. The letter is the other end of the line, and the number affects the color, 1 is default
         
@@ -133,7 +176,11 @@ var layers = {
                         {"color": "red", "font-size": "32px", "font-family": "Comic Sans MS"}],
                     "blank",
                     ["toggle", ["c", "beep"]],
-                    "milestones", "blank", "blank", "upgrades"]    }, 
+                    "milestones", "blank", "blank", "upgrades"] ,
+        style: {
+            'background-color': 'blue'
+        },
+   }, 
     f: { // This layer contains a more minimal set of things, besides a branch and "boop"
         startData() { return {
             unl: false,
