@@ -212,6 +212,13 @@ var layers = {
                 player.a.damage = player.a.damage.add(gain).max(0)
             } 
         }, // Do any gameloop things (e.g. resource generation) inherent to this layer
+        doReset(layer){
+            if (layer == "c") return
+            else if (layers[layer].row == 1)
+                player.a.damage = new Decimal(0)
+            else
+                fullLayerReset("a")
+        },
 
         gainMult() {
             return new Decimal(1)
