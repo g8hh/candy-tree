@@ -3,6 +3,7 @@ The main way to add content is through creating layers. You can either add a lay
 
 
 **You will also need to add layer nodes to the tree in the HTML, look for where it says "Modify the tree in the table below!"** While you're there, you can also edit the modInfo at the top to change the name for your mod.
+Give your mod a unique id so it won't conflict with other saves!
 
 
 Most of the time, you won't need to dive deep into the code to create things, but you still can if you really want to.
