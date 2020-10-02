@@ -59,7 +59,7 @@ function inChallenge(layer, id){
 }
 
 function save() {
-	localStorage.setItem("prestige-tree", btoa(JSON.stringify(player)))
+	localStorage.setItem(modInfo.id, btoa(JSON.stringify(player)))
 }
 
 function fixSave() {
@@ -99,7 +99,7 @@ function fixSave() {
 }
 
 function load() {
-	let get = localStorage.getItem("prestige-tree");
+	let get = localStorage.getItem(modInfo.id);
 	if (get===null || get===undefined) player = getStartPlayer()
 	else player = Object.assign(getStartPlayer(), JSON.parse(atob(get)))
 	fixSave()
@@ -682,6 +682,7 @@ var interval = setInterval(function() {
 	let now = Date.now()
 	let diff = (now - player.time) / 1e3
 	if (player.offTime !== undefined) {
+		if (player.offTime.remain > modInfo.offlineLimit * 3600000) player.offlineTime.remain = modInfo.offlineLimit * 3600000
 		if (player.offTime.remain > 0) {
 			if (player.offTime.remain > modInfo.offlineLimit * 3600000) player.offlineTime.remain = modInfo.offlineLimit * 3600000
 			let offlineDiff = Math.max(player.offTime.remain / 10, diff)
