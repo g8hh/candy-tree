@@ -4,7 +4,8 @@
 		const modInfo = {
 			name: "The Candy Tree",
 			id: "candy",
-			pointsName: "candies"
+			pointsName: "candies",
+			offlineLimit: 1  // In hours
 		}
 	</script>
 	<title>The Candy Tree</title>
@@ -86,8 +87,8 @@
 			<h3>Hotkeys</h3><br>
 			<span v-for="key in hotkeys" v-if="player[key.layer].unl"><br>{{key.desc}}</span>
 		</div>
-		<div v-if="player.tab=='options'" class="col right">
-			<button class="back" onclick="showTab('tree')">←</button><br>
+		<div v-if="player.tab=='options'" v-bind:class="player.c.unlockedTree ? 'col right' : 'fullWidth'">
+			<button class="back" onclick="if (player.c.unlockedTree) showTab('tree'); else showTab('c')">←</button><br>
 			<table>
 				<tr>
 					<td><button class="opt" onclick="save()">Save</button></td>
@@ -140,7 +141,9 @@
 		</div>
 		<div v-for="layer in LAYERS">
 			<div v-if="player.tab==layer" v-bind:class="player.c.unlockedTree ? 'col right' : 'fullWidth'" v-bind:style="layers[layer].style ? layers[layer].style : {}">
-				<button v-if="player.c.unlockedTree" class="back" onclick="showTab('tree')">←</button><br><br><br>
+				<button v-if="player.c.unlockedTree" class="back" onclick="showTab('tree')">←</button>
+				<img v-if="!player.c.unlockedTree" id="optionWheel" v-if="player.tab!='options'" src="options_wheel.png" onclick="showTab('options')"></img>
+				<br><br><br>
 				<div v-if="!layers[layer].tabFormat">
 					<main-display :layer="layer"></main-display>
 					<prestige-button :layer="layer"></prestige-button>
