@@ -1,5 +1,5 @@
-var layers = {
-    c: {
+addLayer("c", {
+        layer: "c", // This is assigned automatically, both to the layer and all upgrades, etc. Shown here so you know about it
         startData() { return {
             unl: true,
 			points: new Decimal(0),
@@ -11,11 +11,11 @@ var layers = {
             thrown: false,
             unlockedLollipops: false,
         }},
-        color: "#00bfbf",
+        color:() => "#00bfbf",
         requires() {return new Decimal(10)}, // Can be a function that takes requirement increases into account
         resource: "lollipops", // Name of prestige currency
         baseResource: "candies", // Name of resource prestige is based on
-        baseAmount() {return player.points},
+        baseAmount() {return player.points}, // Get the current amount of baseResource
         type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
         exponent: 0.5, // Prestige currency exponent
         base: 5, // Only needed for static layers, base of the formula (b^(x^exp))
@@ -26,7 +26,7 @@ var layers = {
 			if (player.c.upgrades.includes(14)) mult = mult.times(layers.c.upgrades[14].effect())
             return mult
         },
-        gainExp() {
+        gainExp() { // Calculate the exponent on main currency from bonuses
             return new Decimal(1)
         },
         row: 0,
@@ -57,7 +57,7 @@ var layers = {
                     if (ret.gte("1e20000000")) ret = ret.sqrt().times("1e10000000")
                     return ret;
                 },
-                effDisp(fx) { return format(fx)+"x" },
+                effectDisplay(fx) { return format(fx)+"x" }, // Add formatting to the effect
             },
             14: {
                 desc: "Unspent lollipops boost lollipop gain.",
@@ -117,13 +117,13 @@ var layers = {
             rows: 1,
             cols: 1,
             respec() { // Optional, reset things and give back your currency. Having this function makes a respec button appear
-                player.c.points = player.c.points.add(player.c.spentOnBuyables) // A built-in thing to keep track of this but only keeps a single value
-                resetBuyables("c")
-                doReset("c", true) // Force a reset
+                player[this.layer].points = player[this.layer].points.add(player[this.layer].spentOnBuyables) // A built-in thing to keep track of this but only keeps a single value
+                resetBuyables(this.layer)
+                doReset(this.layer, true) // Force a reset
             },
-            respecText: "Respec Thingies", // Text on Respec button, optional
+            respecText:() => "Respec Thingies", // Text on Respec button, optional
             11: {
-                title: "Exhancers", // Optional, displayed at the top in a larger font
+                title:() => "Exhancers", // Optional, displayed at the top in a larger font
                 cost(x) { // cost for buying xth buyable, can be an object if there are multiple currencies
                     if (x.gte(25)) x = x.pow(2).div(25)
                     let cost = Decimal.pow(2, x.pow(1.5))
@@ -138,19 +138,20 @@ var layers = {
                     else eff.second = x.times(-1).pow(0.8).times(-1)
                     return eff;
                 },
-                display (){
-                    let data = tmp.buyables.c["11"]
+                display() { // Everything else displayed in the buyable button after the title
+                    let data = tmp.buyables[this.layer][this.id]
                     return "Cost: " + format(data.cost) + " lollipops\n\
-                    Amount: " + player.c.buyables["11"] + "\n\
-                    Adds + " + format(data.effects.first) + " things and multiplies stuff by " + format(data.effects.second)
+                    Amount: " + player[this.layer].buyables[this.id] + "\n\
+                    Adds + " + format(data.effect.first) + " things and multiplies stuff by " + format(data.effect.second)
                 },
-                unl() { return player.c.unl },
-                canAfford() {return player.c.points.gte(tmp.buyables.c[11].cost)},
-                buy() {
-                    cost = tmp.buyables.c[11].cost
-                    player.c.points = player.c.points.sub(cost)	
-                    player.c.buyables[11] = player.c.buyables[11].add(1)
-                    player.c.spentOnBuyables = player.c.spentOnBuyables.add(cost) // This is a built-in system that you can use for respeccing but it only works with a single Decimal value
+                unl() { return player[this.layer].unl }, 
+                canAfford() {
+                    return player[this.layer].points.gte(tmp.buyables[this.layer][this.id].cost)},
+                buy() { 
+                    cost = tmp.buyables[this.layer][this.id].cost
+                    player[this.layer].points = player[this.layer].points.sub(cost)	
+                    player[this.layer].buyables[this.id] = player[this.layer].buyables[this.id].add(1)
+                    player[this.layer].spentOnBuyables = player[this.layer].spentOnBuyables.add(cost) // This is a built-in system that you can use for respeccing but it only works with a single Decimal value
                 },
                 buyMax() {}, // You'll have to handle this yourself if you want
             },
@@ -166,7 +167,7 @@ var layers = {
         convertToDecimal() {
             player.c.eaten = new Decimal(player.c.eaten)
         },
-        layerShown() {return true}, // Condition for when layer appears
+        layerShown() {return true}, // Condition for when layer appears on the tree
         update(diff) {
             gain = tmp.pointGen.times(diff).max(0)
             if (true){
@@ -198,9 +199,9 @@ var layers = {
                     ["display-text", function(){return (player.totalPoints.gte(10) ? candyMerchant : "\xa0")}, {"font-family": "monospace", "white-space": "pre"}],
                     ],
 
-    }, 
+    })
 
-    f: {
+addLayer("f", {
         startData() { return {
             unl: false,
             points: new Decimal(0),
@@ -227,9 +228,9 @@ var layers = {
         branches: [["c", 1]], // Each pair corresponds to a line added to the tree when this node is unlocked. The letter is the other end of the line, and the number affects the color, 1 is default
         incr_order: ["a"], // Array of layer names to have their order increased when this one is first unlocked
 
-    }, 
+    })
 
-    a: {
+addLayer("a", {
         startData() { return {
             unl: false,
 			points: new Decimal(0),
@@ -277,37 +278,7 @@ var layers = {
         incr_order: ["f"], // Array of layer names to have their order increased when this one is first unlocked
 
     }, 
-} 
-
-function layerShown(layer){
-    return layers[layer].layerShown();
-}
-
-var LAYERS = Object.keys(layers);
-
-var hotkeys = {};
-
-
-
-var ROW_LAYERS = {}
-for (layer in layers){
-    row = layers[layer].row
-    if(!ROW_LAYERS[row]) ROW_LAYERS[row] = {}
-
-    ROW_LAYERS[row][layer]=layer;
-}
-
-function addLayer(layerName, layerData){ // Call this to add layers from a different file!
-    layers[layerName] = layerData
-    LAYERS = Object.keys(layers);
-    ROW_LAYERS = {}
-    for (layer in layers){
-        row = layers[layer].row
-        if(!ROW_LAYERS[row]) ROW_LAYERS[row] = {}
-    
-        ROW_LAYERS[row][layer]=layer;
-    }
-}
+)
 
 var candyMerchant = "  \
 .---.\xa0\xa0\xa0\xa0\xa0\xa0\n\
