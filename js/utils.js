@@ -98,8 +98,8 @@ function load() {
 	else player = Object.assign(getStartPlayer(), JSON.parse(atob(get)))
 	fixSave()
 
-	player.tab = "tree"
-	if (player.offlineProd) {
+	player.tab = (player.c.unlockedTree ? "tree" : "c")
+		if (player.offlineProd) {
 		if (player.offTime === undefined) player.offTime = { remain: 0 }
 		player.offTime.remain += (Date.now() - player.time) / 1000
 	}
@@ -242,7 +242,7 @@ function milestoneShown(layer, id) {
 
 // ************ Misc ************
 
-var onTreeTab = true
+var onTreeTab = false
 function showTab(name) {
 	if (LAYERS.includes(name) && !layerUnl(name)) return
 

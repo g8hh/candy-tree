@@ -19,7 +19,6 @@ addLayer("c", {
         type: "normal", // normal: cost to gain currency depends on amount gained. static: cost depends on how much you already have
         exponent: 0.5, // Prestige currency exponent
         base: 5, // Only needed for static layers, base of the formula (b^(x^exp))
-        resCeil: false, // True if the resource needs to be rounded up
         gainMult() {
             mult = new Decimal(1)
             if (player.c.upgrades.includes(22)) mult = mult.times(2)
@@ -34,23 +33,23 @@ addLayer("c", {
             rows: 2,
             cols: 5,
             11: {
-                desc: "Gain twice as many candies.",
+                desc:() => "Gain twice as many candies.",
                 currencyDisplayName: "candies",
                 currencyInternalName: "points",
-                cost: new Decimal(10),
+                cost:() => new Decimal(10),
                 unl() { return player.totalPoints.gte(10)},
             },
             12: {
-                desc: "Discover the power of Lollipops.",
+                desc:() => "Discover the power of Lollipops.",
                 currencyDisplayName: "candies",
                 currencyInternalName: "points",
-                cost: new Decimal(5),
+                cost:() => new Decimal(5),
                 onPurchase() {player.c.unlockedLollipops=true},
                 unl() { return player.c.upgrades.includes(11) },
             },
             13: {
-                desc: "Candy generation is faster based on your unspent lollipops.",
-                cost: new Decimal(1),
+                desc:() => "Candy generation is faster based on your unspent lollipops.",
+                cost:() => new Decimal(1),
                 unl() { return player.c.upgrades.includes(12) },
                 effect() {
                     let ret = player.c.points.add(2).pow(0.5)
@@ -60,8 +59,8 @@ addLayer("c", {
                 effectDisplay(fx) { return format(fx)+"x" }, // Add formatting to the effect
             },
             14: {
-                desc: "Unspent lollipops boost lollipop gain.",
-                cost: new Decimal(5),
+                desc:() => "Unspent lollipops boost lollipop gain.",
+                cost:() => new Decimal(5),
                 unl() { return player.c.upgrades.includes(13) },
                 effect() {
                     let ret = player.c.points.add(2).pow(0.25) 
@@ -71,13 +70,13 @@ addLayer("c", {
                 effDisp(x) { return format(x)+"x" },
             },
             15: {
-                desc: "Dummy upgrade.",
-                cost: new Decimal(0),
+                desc:() => "Dummy upgrade.",
+                cost:() => new Decimal(0),
                 unl() { return false}
             },
             21: {
-                desc: "Candies boost candy production.",
-                cost: new Decimal(100),
+                desc:() => "Candies boost candy production.",
+                cost:() => new Decimal(100),
                 currencyDisplayName: "candies", // Use if using a nonstandard currency
                 currencyInternalName: "points", // Use if using a nonstandard currency
                 unl() { return player.c.upgrades.includes(14) },
@@ -88,72 +87,29 @@ addLayer("c", {
                 effDisp(x) { return format(x)+"x" },
             },
             22: {
-                desc: "Double both lollipop and candy gain.",
-                cost: new Decimal(25),
+                desc:() => "Double both lollipop and candy gain.",
+                cost:() => new Decimal(25),
                 unl() { return player.c.upgrades.includes(21) },
             },
             23: {
-                desc: "Unlock the World Tree.",
-                cost: new Decimal(100),
+                desc:() => "Unlock the World Tree.",
+                cost:() => new Decimal(100),
                 unl() { return player.c.upgrades.includes(21) },
                 onPurchase() {player.c.unlockedTree=true}
             },
             24: {
-                desc: "Wooden Sword: does 1 damage per second.",
+                desc:() => "Wooden Sword: does 1 damage per second.",
                 currencyDisplayName: "candies", // Use if using a nonstandard currency
                 currencyInternalName: "points", // Use if using a nonstandard currency
-                cost: new Decimal(5000),
+                cost:() => new Decimal(5000),
                 unl() { return player.c.upgrades.includes(21) && player.a.order == 0},
             },
             25: {
-                desc: "Wooden Sword: does 1 damage per second.",
+                desc:() => "Wooden Sword: does 1 damage per second.",
                 currencyDisplayName: "candies", // Use if using a nonstandard currency
                 currencyInternalName: "points", // Use if using a nonstandard currency
-                cost: new Decimal(1e10),
+                cost:() => new Decimal(1e10),
                 unl() { return player.c.upgrades.includes(21) && player.a.order == 1},
-            },
-        },
-        buyables: {
-            rows: 1,
-            cols: 1,
-            respec() { // Optional, reset things and give back your currency. Having this function makes a respec button appear
-                player[this.layer].points = player[this.layer].points.add(player[this.layer].spentOnBuyables) // A built-in thing to keep track of this but only keeps a single value
-                resetBuyables(this.layer)
-                doReset(this.layer, true) // Force a reset
-            },
-            respecText:() => "Respec Thingies", // Text on Respec button, optional
-            11: {
-                title:() => "Exhancers", // Optional, displayed at the top in a larger font
-                cost(x) { // cost for buying xth buyable, can be an object if there are multiple currencies
-                    if (x.gte(25)) x = x.pow(2).div(25)
-                    let cost = Decimal.pow(2, x.pow(1.5))
-                    return cost.floor()
-                },
-                effect(x) { // Effects of owning x of the items, x is a decimal
-                    let eff = {}
-                    if (x.gte(0)) eff.first = Decimal.pow(25, x.pow(1.1))
-                    else eff.first = Decimal.pow(1/25, x.times(-1).pow(1.1))
-                
-                    if (x.gte(0)) eff.second = x.pow(0.8)
-                    else eff.second = x.times(-1).pow(0.8).times(-1)
-                    return eff;
-                },
-                display() { // Everything else displayed in the buyable button after the title
-                    let data = tmp.buyables[this.layer][this.id]
-                    return "Cost: " + format(data.cost) + " lollipops\n\
-                    Amount: " + player[this.layer].buyables[this.id] + "\n\
-                    Adds + " + format(data.effect.first) + " things and multiplies stuff by " + format(data.effect.second)
-                },
-                unl() { return player[this.layer].unl }, 
-                canAfford() {
-                    return player[this.layer].points.gte(tmp.buyables[this.layer][this.id].cost)},
-                buy() { 
-                    cost = tmp.buyables[this.layer][this.id].cost
-                    player[this.layer].points = player[this.layer].points.sub(cost)	
-                    player[this.layer].buyables[this.id] = player[this.layer].buyables[this.id].add(1)
-                    player[this.layer].spentOnBuyables = player[this.layer].spentOnBuyables.add(cost) // This is a built-in system that you can use for respeccing but it only works with a single Decimal value
-                },
-                buyMax() {}, // You'll have to handle this yourself if you want
             },
         },
         doReset(layer){
@@ -193,7 +149,7 @@ addLayer("c", {
                     ["display-text", function(){return (player.c.thrown ? "No. \\O_O/" : "\xa0")}],
                     "blank", "blank",
                     ["main-display" , function(){return player.c.unlockedLollipops}],
-                    ["prestige-button", function(){return "Trade all of your candies for "}, function(){return player.c.unlockedLollipops}],
+                    ["prestige-button", [function(){return "Trade all of your candies for "}, function(){return player.c.unlockedLollipops}]],
                     "blank",
                     "blank", "blank", "upgrades", "blank",
                     ["display-text", function(){return (player.totalPoints.gte(10) ? candyMerchant : "\xa0")}, {"font-family": "monospace", "white-space": "pre"}],
@@ -207,7 +163,7 @@ addLayer("f", {
             points: new Decimal(0),
             order: 0,
         }},
-        color: "#B81F28",
+        color:() => "#B81F28",
         requires() {return new Decimal("1e1000")}, 
         resource: "farm points", 
         baseResource: "lollipops", 
@@ -216,7 +172,6 @@ addLayer("f", {
         canBuyMax() {return false},
         base: 3,
         exponent: 0.5, 
-        resCeil: false, 
         gainMult() {
             return new Decimal(1)
         },
@@ -237,7 +192,7 @@ addLayer("a", {
             damage: new Decimal(0),
             order: 0,
         }},
-        color: "#F7E833",
+        color:() => "#F7E833",
         requires() {return new Decimal("1e1000")}, 
         resource: "victories", 
         baseResource: "damage", 
@@ -246,7 +201,6 @@ addLayer("a", {
         canBuyMax() {return false},
         base: 3,
         exponent: 0.5, 
-        resCeil: false, 
         update(diff) {
             gain = new Decimal(0)
             if (player.c.upgrades.includes(24) || player.c.upgrades.includes(25)) gain = gain.add(1);
