@@ -1,11 +1,11 @@
 let modInfo = {
-	name: "The ??? Tree",
-	id: "mymod",
-	author: "nobody",
-	pointsName: "points",
+	name: "The Candy Tree",
+	id: "candyTree",
+	author: "Acamaeda",
+	pointsName: "candies",
 	discordName: "",
 	discordLink: "",
-	initialStartPoints: new Decimal (10), // Used for hard resets and new players
+	initialStartPoints: new Decimal (0), // Used for hard resets and new players
 	
 	offlineLimit: 1,  // In hours
 }
@@ -13,19 +13,19 @@ let modInfo = {
 // Set your version in num and name
 let VERSION = {
 	num: "0.0",
-	name: "Literally nothing",
+	name: "A beginning, possibly",
 }
 
 let changelog = `<h1>Changelog:</h1><br>
 	<h3>v0.0</h3><br>
-		- Added things.<br>
-		- Added stuff.`
+		- Re-created basic candy layer.<br>
+`
 
 let winText = `Congratulations! You have reached the end and beaten this game, but for now...`
 
 // If you add new functions anywhere inside of a layer, and those functions have an effect when called, add them here.
 // (The ones here are examples, all official functions are already taken care of)
-var doNotCallTheseFunctionsEveryTick = ["blowUpEverything"]
+var doNotCallTheseFunctionsEveryTick = ["blowUpEverything", "eatCandies"]
 
 function getStartPoints(){
     return new Decimal(modInfo.initialStartPoints)
@@ -42,6 +42,11 @@ function getPointGen() {
 		return new Decimal(0)
 
 	let gain = new Decimal(1)
+	if (hasUpgrade("c", 11)) gain = gain.times(2)
+	if (hasUpgrade("c", 13)) gain = gain.times(upgradeEffect("c", 13))
+	if (hasUpgrade("c", 21)) gain = gain.times(upgradeEffect("c", 21))
+	if (hasUpgrade("c", 22)) gain = gain.times(2)
+
 	return gain
 }
 

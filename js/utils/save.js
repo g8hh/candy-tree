@@ -23,6 +23,7 @@ function startPlayerBase() {
 		showStory: true,
 		forceOneTab: false,
 		points: modInfo.initialStartPoints,
+		totalPoints: modInfo.initialStartPoints,
 		subtabs: {},
 		lastSafeTab: (readData(layoutInfo.showTree) ? "none" : layoutInfo.startTab)
 	};
